@@ -295,28 +295,37 @@ router.put('/:id/status', async (req, res) => {
       });
     }
 
+    // Update expense status
+    expense.status = 'approved';
+    expense.approvedBy = managerId;
+    expense.approvedAt = new Date();
+    if (comment) {
+      expense.approvalComment = comment;
+    }
+    
+    await expense.save();
+
     res.json({
       success: true,
-      message: 'Expense status updated successfully',
-      expense: expense
+      message: 'Expense approved successfully',
+      expenseStatus: 'approved'
     });
-
   } catch (error) {
-    console.error('Update expense status error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error while updating expense status' 
+    console.error('Approve direct expense error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while approving expense'
     });
   }
 });
 
-// Delete expense
-router.delete('/:id', async (req, res) => {
+// Reject direct company expense (not workflow-based)
+router.post('/reject-direct/:expenseId', async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const expense = await Expense.findByIdAndDelete(id);
-
+    const { expenseId } = req.params;
+    const { managerId, comment } = req.body;
+    
+    const expense = await Expense.findById(expenseId);
     if (!expense) {
       return res.status(404).json({
         success: false,

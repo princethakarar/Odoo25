@@ -23,7 +23,8 @@ const approvalRuleSchema = new mongoose.Schema({
     default: null
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  collection: 'approvalRules'
 });
 
 module.exports = mongoose.model('ApprovalRule', approvalRuleSchema);
