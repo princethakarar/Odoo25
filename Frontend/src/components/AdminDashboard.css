@@ -62,6 +62,13 @@
   margin: 0;
 }
 
+.company-info {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  margin: 5px 0 0 0;
+  font-weight: 400;
+}
+
 .logout-btn {
   background: rgba(255, 255, 255, 0.2);
   color: white;
@@ -93,6 +100,13 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 25px;
+}
+
+.table-header h2 {
+  color: #2c3e50;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
 }
 
 .new-user-btn {

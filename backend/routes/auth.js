@@ -3,44 +3,58 @@ const router = express.Router();
 const User = require('../models/User');
 const Company = require('../models/Company');
 
-// Signup endpoint
+// Signup endpoint - Admin only, one per company
 router.post('/signup', async (req, res) => {
   try {
-    const { name, email, password, country } = req.body;
+    const { companyName, email, password } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ 
-      $or: [
-        { email: email.toLowerCase() },
-        { name: name.toLowerCase() }
-      ]
+    // Check if user already exists by email
+    const existingUserByEmail = await User.findOne({ 
+      email: email.toLowerCase()
     });
 
-    if (existingUser) {
+    if (existingUserByEmail) {
       return res.status(400).json({
         success: false,
-        message: 'User with this email or name already exists'
+        message: 'User with this email already exists'
       });
     }
 
-    // Find or create company based on country
-    let company = await Company.findOne({ country: country });
-    if (!company) {
-      // Create new company if it doesn't exist
+    // Check if company already has an admin
+    const existingCompany = await Company.findOne({ name: companyName });
+    if (existingCompany) {
+      const existingAdmin = await User.findOne({ 
+        companyId: existingCompany._id, 
+        role: 'Admin' 
+      });
+      
+      if (existingAdmin) {
+        return res.status(400).json({
+          success: false,
+          message: 'Only one admin per company can register'
+        });
+      }
+    }
+
+    // Create or find company
+    let company;
+    if (existingCompany) {
+      company = existingCompany;
+    } else {
       company = new Company({
-        name: `${country} Company`,
-        country: country,
-        currency: 'USD' // Default currency, can be updated later
+        name: companyName,
+        country: 'Global', // Default country
+        currency: 'USD' // Default currency
       });
       await company.save();
     }
 
-    // Create new user
+    // Create new admin user
     const newUser = new User({
-      name: name.toLowerCase(),
+      name: companyName.toLowerCase(), // Use company name as user name
       email: email.toLowerCase(),
       passwordHash: password,
-      role: 'Admin', // First user is always Admin
+      role: 'Admin', // Only admin can signup
       companyId: company._id,
       managerId: null // Admin has no manager
     });
@@ -67,7 +81,7 @@ router.post('/signup', async (req, res) => {
   }
 });
 
-// Login endpoint
+// Login endpoint - Admin only
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -81,6 +95,14 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ 
         success: false, 
         message: 'Invalid email or password' 
+      });
+    }
+
+    // Check if user is admin
+    if (user.role !== 'Admin') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Only admin users can login' 
       });
     }
 
@@ -104,7 +126,7 @@ router.post('/login', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Login successful',
+      message: 'Admin login successful',
       user: userData
     });
 
@@ -117,24 +139,30 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Get all users for admin dashboard
-router.get('/users', async (req, res) => {
+// Get employees for admin dashboard (employees only, not other admins)
+router.get('/employees/:companyId', async (req, res) => {
   try {
-    const users = await User.find({})
+    const { companyId } = req.params;
+    
+    // Get all employees (non-admin users) for the specific company
+    const employees = await User.find({ 
+      companyId: companyId,
+      role: { $ne: 'Admin' } // Exclude admin users
+    })
       .populate('companyId', 'name country currency')
       .populate('managerId', 'name email role')
       .select('-passwordHash');
 
     res.json({
       success: true,
-      users: users
+      employees: employees
     });
 
   } catch (error) {
-    console.error('Get users error:', error);
+    console.error('Get employees error:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Server error while fetching users' 
+      message: 'Server error while fetching employees' 
     });
   }
 });
