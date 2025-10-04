@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './Auth.css';
 
-const Signin = ({ onSwitchToSignup }) => {
+const Signin = ({ onSwitchToSignup, onLogin }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -40,12 +40,34 @@ const Signin = ({ onSwitchToSignup }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (validateForm()) {
-      // Handle signin logic here
-      console.log('Signin data:', formData);
-      alert('Login successful!');
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          console.log('Login successful:', data.user);
+          alert('Login successful!');
+          onLogin(data.user); // Navigate to dashboard with user data
+        } else {
+          alert(data.message || 'Invalid email or password. Please try again.');
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        alert('Network error. Please check if the backend server is running.');
+      }
     }
   };
 
@@ -57,11 +79,12 @@ const Signin = ({ onSwitchToSignup }) => {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h1 className="auth-title">SignIn Page</h1>
+        <h1 className="auth-title">Admin Login</h1>
+        <p className="auth-subtitle">Sign in to your admin account</p>
         
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">Email ID</label>
             <input
               type="email"
               id="email"

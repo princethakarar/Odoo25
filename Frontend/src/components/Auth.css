@@ -50,9 +50,17 @@
 .auth-title {
   text-align: center;
   color: #2c3e50;
-  margin: 20px 0 30px 0;
+  margin: 20px 0 10px 0;
   font-size: 24px;
   font-weight: 600;
+}
+
+.auth-subtitle {
+  text-align: center;
+  color: #7f8c8d;
+  margin: 0 0 30px 0;
+  font-size: 14px;
+  font-weight: 400;
 }
 
 /* Auth Form */
@@ -84,6 +92,7 @@
   transition: all 0.3s ease;
   background: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  color: black;
 }
 
 .form-group input:focus,

@@ -14,12 +14,21 @@ app.use(express.json()); // Allow the server to accept JSON in the request body
 
 // --- MongoDB Connection ---
 const uri = process.env.MONGO_URI;
-mongoose.connect(uri);
+mongoose.connect(uri, {
+  dbName: 'ExpenseDB' // Explicitly use your existing ExpenseDB database
+});
 
 const connection = mongoose.connection;
 connection.once('open', () => {
-  console.log("MongoDB database connection established successfully");
+  console.log("MongoDB ExpenseDB database connection established successfully");
 });
+
+connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
+});
+
+// Import routes
+const authRoutes = require('./routes/auth');
 
 // Basic route
 app.get('/', (req, res) => {
@@ -29,6 +38,9 @@ app.get('/', (req, res) => {
 app.get('/api/data', (req, res) => {
     res.json({ message: "Hello from the backend!", users: ['John', 'Jane', 'Jim'] });
 });
+
+// Use routes
+app.use('/api/auth', authRoutes);
 
 // Start the server
 app.listen(PORT, () => {
