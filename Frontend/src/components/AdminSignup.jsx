@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import './Auth.css';
 
-const AdminSignup = ({ onSwitchToSignin }) => {
+const AdminSignup = ({ onSwitchToSignin, onSignup }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -101,18 +101,36 @@ const AdminSignup = ({ onSwitchToSignin }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (validateForm()) {
-      // Handle signup logic here
-      const selectedCountry = countries.find(country => country.name === formData.country);
-      const currencyInfo = selectedCountry ? Object.values(selectedCountry.currencies)[0] : null;
-      
-      console.log('Signup data:', {
-        ...formData,
-        currency: currencyInfo ? currencyInfo.name : 'N/A'
-      });
-      alert('Admin signup successful!');
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/signup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+            country: formData.country
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          console.log('Signup successful:', data.user);
+          alert('Admin signup successful!');
+          onSignup(data.user); // Navigate to dashboard with user data
+        } else {
+          alert(data.message || 'Signup failed. Please try again.');
+        }
+      } catch (error) {
+        console.error('Signup error:', error);
+        alert('Network error. Please check if the backend server is running.');
+      }
     }
   };
 
