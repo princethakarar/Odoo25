@@ -45,6 +45,32 @@ const expenseSchema = new mongoose.Schema({
     type: String,
     default: 'pending',
     enum: ['pending', 'approved', 'rejected']
+  },
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  approvedAt: {
+    type: Date,
+    default: null
+  },
+  approvalComment: {
+    type: String,
+    default: null
+  },
+  rejectedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  rejectedAt: {
+    type: Date,
+    default: null
+  },
+  rejectionComment: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true

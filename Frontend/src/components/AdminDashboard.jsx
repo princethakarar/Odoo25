@@ -1,22 +1,45 @@
 import { useState, useEffect } from 'react';
 import './AdminDashboard.css';
+import AdminApprovalRules from './AdminApprovalRules';
+import ManagerView from './ManagerView';
 
 const AdminDashboard = ({ onLogout, currentUser }) => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentView, setCurrentView] = useState('users'); // 'users', 'approval-rules', or 'manager-view'
+  const [canAccessManagerView, setCanAccessManagerView] = useState(false);
 
   const [showNewUserForm, setShowNewUserForm] = useState(false);
   const [newUser, setNewUser] = useState({
     name: '',
     role: '',
     manager: '',
-    email: ''
+    email: '',
+    isApprover: false
   });
   const [errors, setErrors] = useState({});
   const [sendingPassword, setSendingPassword] = useState(null);
 
   const roles = ['Admin', 'Manager', 'Employee'];
   const managers = users.filter(user => user.role === 'Manager' || user.role === 'Admin');
+
+  // Check if user can access manager view
+  const checkManagerAccess = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/expenses/manager/${currentUser.id}/can-access`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setCanAccessManagerView(data.canAccess);
+      } else {
+        console.error('Failed to check manager access:', data.message);
+        setCanAccessManagerView(false);
+      }
+    } catch (error) {
+      console.error('Error checking manager access:', error);
+      setCanAccessManagerView(false);
+    }
+  };
 
   // Fetch users from database
   useEffect(() => {
@@ -38,7 +61,8 @@ const AdminDashboard = ({ onLogout, currentUser }) => {
     };
 
     fetchUsers();
-  }, []);
+    checkManagerAccess();
+  }, [currentUser]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -93,20 +117,21 @@ const AdminDashboard = ({ onLogout, currentUser }) => {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            name: newUser.name,
-            email: newUser.email,
-            role: newUser.role,
-            managerId: newUser.manager || null,
-            companyId: currentUser?.companyId?._id || currentUser?.companyId
-          })
+        body: JSON.stringify({
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+          managerId: newUser.manager || null,
+          companyId: currentUser?.companyId?._id || currentUser?.companyId,
+          isApprover: newUser.isApprover
+        })
         });
 
         const data = await response.json();
 
         if (data.success) {
           setUsers(prev => [...prev, data.user]);
-          setNewUser({ name: '', role: '', manager: '', email: '' });
+          setNewUser({ name: '', role: '', manager: '', email: '', isApprover: false });
           setShowNewUserForm(false);
           setErrors({});
           alert('User added successfully!');
@@ -156,20 +181,46 @@ const AdminDashboard = ({ onLogout, currentUser }) => {
     <div className="admin-dashboard">
       <div className="dashboard-header">
         <h1>Admin Dashboard</h1>
-        <button className="logout-btn" onClick={handleLogout}>
-          Logout
-        </button>
+        <div className="header-actions">
+          <div className="nav-tabs">
+            <button 
+              className={`nav-tab ${currentView === 'users' ? 'active' : ''}`}
+              onClick={() => setCurrentView('users')}
+            >
+              User Management
+            </button>
+            <button 
+              className={`nav-tab ${currentView === 'approval-rules' ? 'active' : ''}`}
+              onClick={() => setCurrentView('approval-rules')}
+            >
+              Approval Rules
+            </button>
+            {canAccessManagerView && (
+              <button 
+                className={`nav-tab ${currentView === 'manager-view' ? 'active' : ''}`}
+                onClick={() => setCurrentView('manager-view')}
+              >
+                Manager's View
+              </button>
+            )}
+          </div>
+          <button className="logout-btn" onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
       </div>
 
       <div className="dashboard-content">
-        <div className="table-header">
-          <button 
-            className="new-user-btn"
-            onClick={() => setShowNewUserForm(true)}
-          >
-            New
-          </button>
-        </div>
+        {currentView === 'users' && (
+          <>
+            <div className="table-header">
+              <button 
+                className="new-user-btn"
+                onClick={() => setShowNewUserForm(true)}
+              >
+                New
+              </button>
+            </div>
 
         <div className="table-container">
           <table className="users-table">
@@ -240,6 +291,16 @@ const AdminDashboard = ({ onLogout, currentUser }) => {
             </tbody>
           </table>
         </div>
+          </>
+        )}
+        
+        {currentView === 'approval-rules' && (
+          <AdminApprovalRules />
+        )}
+        
+        {currentView === 'manager-view' && (
+          <ManagerView currentUser={currentUser} />
+        )}
       </div>
 
       {/* New User Modal */}
@@ -321,6 +382,24 @@ const AdminDashboard = ({ onLogout, currentUser }) => {
                   placeholder="Enter email address"
                 />
                 {errors.email && <span className="error-message">{errors.email}</span>}
+              </div>
+
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="isApprover"
+                    checked={newUser.isApprover}
+                    onChange={(e) => setNewUser(prev => ({
+                      ...prev,
+                      isApprover: e.target.checked
+                    }))}
+                  />
+                  <span className="checkbox-text">Set as Approver</span>
+                </label>
+                <small className="checkbox-help">
+                  Approvers can review and approve expenses in the Manager's View
+                </small>
               </div>
 
               <div className="form-actions">

@@ -29,6 +29,8 @@ connection.on('error', (err) => {
 
 // Import routes
 const authRoutes = require('./routes/auth');
+const approvalRulesRoutes = require('./routes/approvalRules');
+const expensesRoutes = require('./routes/expenses');
 
 // Basic route
 app.get('/', (req, res) => {
@@ -41,6 +43,8 @@ app.get('/api/data', (req, res) => {
 
 // Use routes
 app.use('/api/auth', authRoutes);
+app.use('/api/approval-rules', approvalRulesRoutes);
+app.use('/api/expenses', expensesRoutes);
 
 // Start the server
 app.listen(PORT, () => {

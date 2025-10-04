@@ -142,7 +142,7 @@ router.get('/users', async (req, res) => {
 // Add new user
 router.post('/users', async (req, res) => {
   try {
-    const { name, email, role, managerId, companyId } = req.body;
+    const { name, email, role, managerId, companyId, isApprover } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ 
@@ -169,7 +169,8 @@ router.post('/users', async (req, res) => {
       passwordHash: tempPassword, // Temporary password
       role: role,
       companyId: companyId,
-      managerId: managerId || null
+      managerId: managerId || null,
+      isApprover: isApprover || false
     });
 
     await newUser.save();
@@ -228,6 +229,43 @@ router.post('/send-password/:userId', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Server error while sending password' 
+    });
+  }
+});
+
+// Update user approver status
+router.put('/users/:userId/approver', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { isApprover } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    user.isApprover = isApprover;
+    await user.save();
+
+    const updatedUser = await User.findById(userId)
+      .populate('companyId', 'name country currency')
+      .populate('managerId', 'name email role')
+      .select('-passwordHash');
+
+    res.json({
+      success: true,
+      message: 'User approver status updated successfully',
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error('Update approver status error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error while updating approver status' 
     });
   }
 });
