@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import './AdminDashboard.css';
 
 const AdminDashboard = ({ onLogout, currentUser }) => {
-  const [users, setUsers] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [showNewUserForm, setShowNewUserForm] = useState(false);
@@ -15,30 +15,33 @@ const AdminDashboard = ({ onLogout, currentUser }) => {
   const [errors, setErrors] = useState({});
   const [sendingPassword, setSendingPassword] = useState(null);
 
-  const roles = ['Admin', 'Manager', 'Employee'];
-  const managers = users.filter(user => user.role === 'Manager' || user.role === 'Admin');
+  const roles = ['Manager', 'Employee']; // Only allow creating employees and managers
+  const managers = employees.filter(emp => emp.role === 'Manager');
 
-  // Fetch users from database
+  // Fetch employees from database
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchEmployees = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/auth/users');
+        const companyId = currentUser?.companyId?._id || currentUser?.companyId;
+        const response = await fetch(`http://localhost:5000/api/auth/employees/${companyId}`);
         const data = await response.json();
         
         if (data.success) {
-          setUsers(data.users);
+          setEmployees(data.employees);
         } else {
-          console.error('Failed to fetch users:', data.message);
+          console.error('Failed to fetch employees:', data.message);
         }
       } catch (error) {
-        console.error('Error fetching users:', error);
+        console.error('Error fetching employees:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUsers();
-  }, []);
+    if (currentUser?.companyId) {
+      fetchEmployees();
+    }
+  }, [currentUser]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -60,8 +63,8 @@ const AdminDashboard = ({ onLogout, currentUser }) => {
 
     if (!newUser.name.trim()) {
       newErrors.name = 'Name is required';
-    } else if (users.some(user => user.name.toLowerCase() === newUser.name.toLowerCase())) {
-      newErrors.name = 'User with this name already exists';
+    } else if (employees.some(emp => emp.name.toLowerCase() === newUser.name.toLowerCase())) {
+      newErrors.name = 'Employee with this name already exists';
     }
 
     if (!newUser.role) {
@@ -72,8 +75,8 @@ const AdminDashboard = ({ onLogout, currentUser }) => {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(newUser.email)) {
       newErrors.email = 'Email is invalid';
-    } else if (users.some(user => user.email.toLowerCase() === newUser.email.toLowerCase())) {
-      newErrors.email = 'User with this email already exists';
+    } else if (employees.some(emp => emp.email.toLowerCase() === newUser.email.toLowerCase())) {
+      newErrors.email = 'Employee with this email already exists';
     }
 
     if (newUser.role === 'Employee' && !newUser.manager) {
@@ -105,13 +108,13 @@ const AdminDashboard = ({ onLogout, currentUser }) => {
         const data = await response.json();
 
         if (data.success) {
-          setUsers(prev => [...prev, data.user]);
+          setEmployees(prev => [...prev, data.user]);
           setNewUser({ name: '', role: '', manager: '', email: '' });
           setShowNewUserForm(false);
           setErrors({});
-          alert('User added successfully!');
+          alert('Employee added successfully!');
         } else {
-          alert(data.message || 'Failed to add user');
+          alert(data.message || 'Failed to add employee');
         }
       } catch (error) {
         console.error('Error adding user:', error);
@@ -155,7 +158,10 @@ const AdminDashboard = ({ onLogout, currentUser }) => {
   return (
     <div className="admin-dashboard">
       <div className="dashboard-header">
-        <h1>Admin Dashboard</h1>
+        <div className="header-info">
+          <h1>Admin Dashboard</h1>
+          <p className="company-info">Company: {currentUser?.companyId?.name || 'Unknown'}</p>
+        </div>
         <button className="logout-btn" onClick={handleLogout}>
           Logout
         </button>
@@ -163,11 +169,12 @@ const AdminDashboard = ({ onLogout, currentUser }) => {
 
       <div className="dashboard-content">
         <div className="table-header">
+          <h2>Company Employees</h2>
           <button 
             className="new-user-btn"
             onClick={() => setShowNewUserForm(true)}
           >
-            New
+            Add Employee
           </button>
         </div>
 
@@ -175,7 +182,7 @@ const AdminDashboard = ({ onLogout, currentUser }) => {
           <table className="users-table">
             <thead>
               <tr>
-                <th>User</th>
+                <th>Employee</th>
                 <th>Role</th>
                 <th>Manager</th>
                 <th>Email</th>
@@ -187,51 +194,51 @@ const AdminDashboard = ({ onLogout, currentUser }) => {
               {loading ? (
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>
-                    Loading users...
+                    Loading employees...
                   </td>
                 </tr>
-              ) : users.length === 0 ? (
+              ) : employees.length === 0 ? (
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>
-                    No users found
+                    No employees found
                   </td>
                 </tr>
               ) : (
-                users.map(user => (
-                  <tr key={user._id}>
+                employees.map(employee => (
+                  <tr key={employee._id}>
                     <td>
                       <div className="user-cell">
-                        <span className="user-name">{user.name}</span>
+                        <span className="user-name">{employee.name}</span>
                         <span className="dropdown-arrow">▼</span>
                       </div>
                     </td>
                     <td>
                       <div className="role-cell">
-                        <span className="role-name">{user.role}</span>
+                        <span className="role-name">{employee.role}</span>
                         <span className="dropdown-arrow">▼</span>
                       </div>
                     </td>
                     <td>
                       <div className="manager-cell">
                         <span className="manager-name">
-                          {user.managerId ? user.managerId.name : '-'}
+                          {employee.managerId ? employee.managerId.name : '-'}
                         </span>
-                        {user.managerId && <span className="dropdown-arrow">▼</span>}
+                        {employee.managerId && <span className="dropdown-arrow">▼</span>}
                       </div>
                     </td>
-                    <td className="email-cell">{user.email}</td>
+                    <td className="email-cell">{employee.email}</td>
                     <td>
-                      <span className={`status-badge ${user.status || 'active'}`}>
-                        {user.status || 'active'}
+                      <span className={`status-badge ${employee.status || 'active'}`}>
+                        {employee.status || 'active'}
                       </span>
                     </td>
                     <td>
                       <button 
                         className="send-password-btn"
-                        onClick={() => handleSendPassword(user._id)}
-                        disabled={sendingPassword === user._id}
+                        onClick={() => handleSendPassword(employee._id)}
+                        disabled={sendingPassword === employee._id}
                       >
-                        {sendingPassword === user._id ? 'Sending...' : 'Send password'}
+                        {sendingPassword === employee._id ? 'Sending...' : 'Send password'}
                       </button>
                     </td>
                   </tr>
@@ -247,7 +254,7 @@ const AdminDashboard = ({ onLogout, currentUser }) => {
         <div className="modal-overlay" onClick={() => setShowNewUserForm(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Add New User</h2>
+              <h2>Add New Employee</h2>
               <button 
                 className="close-btn"
                 onClick={() => setShowNewUserForm(false)}
@@ -328,7 +335,7 @@ const AdminDashboard = ({ onLogout, currentUser }) => {
                   Cancel
                 </button>
                 <button type="submit" className="add-user-btn">
-                  Add User
+                  Add Employee
                 </button>
               </div>
             </form>

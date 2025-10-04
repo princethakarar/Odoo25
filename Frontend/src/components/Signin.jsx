@@ -79,11 +79,12 @@ const Signin = ({ onSwitchToSignup, onLogin }) => {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h1 className="auth-title">SignIn Page</h1>
+        <h1 className="auth-title">Admin Login</h1>
+        <p className="auth-subtitle">Sign in to your admin account</p>
         
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">Email ID</label>
             <input
               type="email"
               id="email"
